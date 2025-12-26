@@ -8,3 +8,7 @@ This repository demonstrates AI-powered automation using GitHub Actions and Olla
 - Model caching for performance optimization
 
 Built during AI Cloud Ops training.
+
+## Recent Updates
+- Added Ollama installation caching for improved performance
+- Reduced workflow setup time by caching the Ollama binary

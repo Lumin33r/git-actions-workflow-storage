@@ -15,3 +15,5 @@ venv/
 __pycache__
 
 performance_log.txt
+.coverage
+test-results.xml

@@ -1,196 +1,301 @@
 name: Ollama AI Processing
+
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
   ai-processing:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: System information
-      run: |
-        echo "Runner OS: ${{ runner.os }}"
-        echo "Available disk space:"
-        df -h
-        echo "Available memory:"
-        free -h
-        echo "CPU information:"
-        nproc
-    - name: Cache Ollama installation
-      uses: actions/cache@v3
-      id: ollama-cache
-      with:
-        path: ~/ollama-bin
-        key: ollama-install-${{ runner.os }}-v1
-    - name: Install Ollama
-      run: |
-        if [ -f ~/ollama-bin/ollama ]; then
-          echo "✓ Using cached Ollama installation"
-          sudo cp ~/ollama-bin/ollama /usr/local/bin/ollama
-          sudo chmod +x /usr/local/bin/ollama
-        else
-          echo "↓ Installing Ollama (first run)..."
-          curl -fsSL https://ollama.com/install.sh | sh
-          mkdir -p ~/ollama-bin
-          cp /usr/local/bin/ollama ~/ollama-bin/
-          echo "✓ Cached Ollama binary for future runs"
-        fi
-    - name: Start Ollama service
-      run: |
-        ollama serve &
-        sleep 10
-    - name: Verify Ollama installation
-      run: |
-        ollama --version
-        echo "Cache hit: ${{ steps.ollama-cache.outputs.cache-hit }}"
-        if [ -f ~/ollama-bin/ollama ]; then
-          echo "Binary size: $(du -h ~/ollama-bin/ollama | cut -f1)"
-        fi
-    - name: Download AI model
-      run: |
-        echo "Downloading Llama 3.2 1B model..."
-        ollama pull llama3.2:1b
-    - name: Verify model availability
-      run: |
-        echo "Available models:"
-        ollama list
-        echo "Model download complete"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Execute AI query
-      run: |
-        echo "Processing AI prompt..."
-        RESPONSE=$(ollama run llama3.2:1b "Explain what DevOps means in one sentence, focusing on automation and collaboration.")
-        echo "AI Response:"
-        echo "$RESPONSE"
-    - name: Advanced AI analysis
-      run: |
-        mkdir -p outputs
-        WORKFLOW_FILE=".github/workflows/ollama-basic.yml"
-        PROMPT="Analyze this GitHub Actions workflow and suggest three specific improvements for production use. Focus on security, performance, and maintainability."
-        WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
-        echo "Analyzing your workflow at $WORKFLOW_FILE..."
-        RESPONSE=$(ollama run llama3.2:1b "$PROMPT\n\n$WORKFLOW_CONTENT")
-        echo "AI Analysis:"
-        echo "$RESPONSE"
-        echo "$RESPONSE" > "outputs/workflow-analysis-$(date '+%Y-%m-%d_%H-%M-%S').txt"
-    - name: Save AI response
-      run: |
-        TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
-        ollama run llama3.2:1b "Explain what DevOps means in one sentence, focusing on automation and collaboration." > "outputs/ai-response-$TIMESTAMP.txt"
-        echo "Response saved to outputs/ai-response-$TIMESTAMP.txt"
-        cat "outputs/ai-response-$TIMESTAMP.txt"
-    - name: Upload AI responses
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: ai-responses-${{ github.run_number }}
-        path: outputs/
-        retention-days: 30
-    - name: Setup Python testing environment
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest
-    - name: Create AI workflow tests
-      run: |
-        cat > test_ai_workflow.py << 'EOF'
-        import subprocess
-        import pytest
-        import os
+      - name: System information
+        run: |
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Available disk space:"
+          df -h
+          echo "Available memory:"
+          free -h
+          echo "CPU information:"
+          nproc
 
-        def test_ollama_service_health():
-            """Verify Ollama service is responsive"""
-            result = subprocess.run(['ollama', '--version'], capture_output=True, text=True)
-            assert result.returncode == 0
-            assert 'ollama version' in result.stdout.lower()
+      - name: Cache Ollama installation
+        uses: actions/cache@v3
+        id: ollama-cache
+        with:
+          path: ~/ollama-bin
+          key: ollama-install-${{ runner.os }}-v1
 
-        def test_model_availability():
-            """Verify required model is available"""
-            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True)
-            assert result.returncode == 0
-            assert 'llama3.2:1b' in result.stdout
+      - name: Install Ollama
+        run: |
+          if [ -f ~/ollama-bin/ollama ]; then
+            echo "✓ Using cached Ollama installation"
+            sudo cp ~/ollama-bin/ollama /usr/local/bin/ollama
+            sudo chmod +x /usr/local/bin/ollama
+          else
+            echo "↓ Installing Ollama (first run)..."
+            curl -fsSL https://ollama.com/install.sh | sh
+            mkdir -p ~/ollama-bin
+            cp /usr/local/bin/ollama ~/ollama-bin/
+            echo "✓ Cached Ollama binary for future runs"
+          fi
 
-        def test_basic_ai_functionality():
-            """Test basic AI query and response"""
-            result = subprocess.run([
-                'ollama', 'run', 'llama3.2:1b', 
-                'Respond with exactly: TEST_PASSED'
-            ], capture_output=True, text=True, timeout=30)
-            assert result.returncode == 0
-            assert len(result.stdout.strip()) > 0
+      - name: Start Ollama service
+        run: |
+          ollama serve &
+          sleep 10
 
-        def test_cache_directory_exists():
-            """Verify installation cache directory was created"""
-            cache_dir = os.path.expanduser('~/ollama-bin')
-            assert os.path.exists(cache_dir)
-            assert os.path.isfile(os.path.join(cache_dir, 'ollama'))
-        EOF
-    - name: Run automated tests
-      run: |
-        python -m pytest test_ai_workflow.py -v
-    - name: Performance benchmarking
-      run: |
-        echo "=== Workflow Performance Report ===" > performance-report.txt
-        echo "Timestamp: $(date)" >> performance-report.txt
-        echo "Workflow Run: ${{ github.run_number }}" >> performance-report.txt
-        echo "Cache Hit: ${{ steps.ollama-cache.outputs.cache-hit }}" >> performance-report.txt
-        
-        echo "Testing AI response time..." >> performance-report.txt
-        start_time=$(date +%s)
-        ollama run llama3.2:1b "What is continuous integration?" > ai_response.txt
-        end_time=$(date +%s)
-        response_time=$((end_time - start_time))
-        
-        echo "AI Response Time: ${response_time} seconds" >> performance-report.txt
-        echo "Response Length: $(wc -w < ai_response.txt) words" >> performance-report.txt
-        
-        cat performance-report.txt
-    - name: Upload performance report
-      uses: actions/upload-artifact@v4
-      with:
-        name: performance-report-${{ github.run_number }}
-        path: performance-report.txt
-        retention-days: 30
-    - name: Capture test results for analysis
-      if: always()
-      run: |
-        mkdir -p analysis
-        python -m pytest test_ai_workflow.py -v --tb=short > analysis/test_output.txt 2>&1 || true
-        
-        if grep -q "FAILED" analysis/test_output.txt; then
-          echo "TEST_FAILURES=true" >> $GITHUB_ENV
-          echo "Found test failures - preparing for AI analysis"
-        else
-          echo "TEST_FAILURES=false" >> $GITHUB_ENV
-          echo "All tests passed"
-        fi
-        
-        cat analysis/test_output.txt
-    - name: Generate test metrics
-      if: always()
-      run: |
-        TOTAL_TESTS=$(grep -c "def test_" test_ai_workflow.py || echo "0")
-        PASSED_TESTS=$(grep -c "PASSED" analysis/test_output.txt || echo "0")
-        FAILED_TESTS=$(grep -c "FAILED" analysis/test_output.txt || echo "0")
-        
-        cat > analysis/test_metrics.txt << EOF
-        Test Execution Summary:
-        - Total Tests: $TOTAL_TESTS
-        - Passed: $PASSED_TESTS  
-        - Failed: $FAILED_TESTS
-        - Workflow Run: ${{ github.run_number }}
-        - Timestamp: $(date)
-        - Installation Cache: ${{ steps.ollama-cache.outputs.cache-hit }}
-        EOF
-        
-        cat analysis/test_metrics.txt
-    - name: Upload test analysis
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-analysis-${{ github.run_number }}
-        path: analysis/
-        retention-days: 30
+      - name: Verify Ollama installation
+        run: |
+          ollama --version
+          echo "Cache hit: ${{ steps.ollama-cache.outputs.cache-hit }}"
+          if [ -f ~/ollama-bin/ollama ]; then
+            echo "Binary size: $(du -h ~/ollama-bin/ollama | cut -f1)"
+          fi
 
+      - name: Download AI model
+        run: |
+          echo "Downloading llama3.2:1b model..."
+          ollama pull llama3.2:1b
+
+      - name: Verify model availability
+        run: |
+          echo "Available models:"
+          ollama list
+          echo "Model download complete"
+
+      - name: Execute AI query
+        run: |
+          echo "Processing AI prompt..."
+          RESPONSE=$(ollama run llama3.2:1b "Explain what DevOps means in one sentence, focusing on automation and collaboration.")
+          echo "AI Response:"
+          echo "$RESPONSE"
+
+      - name: Advanced AI analysis
+        run: |
+          mkdir -p outputs
+          WORKFLOW_FILE=".github/workflows/ollama-basic.yml"
+          PROMPT="Analyze this GitHub Actions workflow and suggest three specific improvements for production use. Focus on security, performance, and maintainability."
+          WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
+          echo "Analyzing your workflow at $WORKFLOW_FILE..."
+          RESPONSE=$(ollama run llama3.2:1b "$PROMPT\n\n$WORKFLOW_CONTENT")
+          echo "AI Analysis:"
+          echo "$RESPONSE"
+          echo "$RESPONSE" > "outputs/workflow-analysis-$(date '+%Y-%m-%d_%H-%M-%S').txt"
+
+      - name: Save AI response
+        run: |
+          TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
+          ollama run llama3.2:1b "Explain what DevOps means in one sentence, focusing on automation and collaboration." > "outputs/ai-response-$TIMESTAMP.txt"
+          echo "Response saved to outputs/ai-response-$TIMESTAMP.txt"
+          cat "outputs/ai-response-$TIMESTAMP.txt"
+
+      - name: Upload AI responses
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-responses-${{ github.run_number }}
+          path: outputs/
+          retention-days: 30
+
+      # ============================================
+      # TESTING SECTION
+      # ============================================
+
+      - name: Setup Python testing environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run critical tests (fail fast)
+        id: critical-tests
+        run: |
+          mkdir -p test-results
+          python -m pytest tests/ -v \
+            --junitxml=test-results/critical-results.xml \
+            --cov=. \
+            --cov-report=xml:test-results/coverage.xml \
+            --cov-report=html:test-results/coverage-html \
+            -x 2>&1 | tee test-results/critical-output.txt
+          echo "CRITICAL_EXIT_CODE=$?" >> $GITHUB_ENV
+
+      - name: Run reliability tests (advisory)
+        id: advisory-tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/test_reliability.py -v \
+            --junitxml=test-results/reliability-results.xml \
+            --timeout=120 \
+            2>&1 | tee test-results/advisory-output.txt || true
+
+      - name: Performance benchmarking
+        id: performance
+        run: |
+          echo "=== Workflow Performance Report ===" > test-results/performance-report.txt
+          echo "Timestamp: $(date)" >> test-results/performance-report.txt
+          echo "Workflow Run: ${{ github.run_number }}" >> test-results/performance-report.txt
+          echo "Cache Hit: ${{ steps.ollama-cache.outputs.cache-hit }}" >> test-results/performance-report.txt
+          echo "" >> test-results/performance-report.txt
+
+          echo "=== AI Response Timing ===" >> test-results/performance-report.txt
+
+          # Test 1: Simple query
+          start_time=$(date +%s.%N)
+          ollama run llama3.2:1b "Say hello" > /dev/null 2>&1
+          end_time=$(date +%s.%N)
+          simple_time=$(echo "$end_time - $start_time" | bc)
+          echo "Simple Query Time: ${simple_time}s" >> test-results/performance-report.txt
+          echo "SIMPLE_QUERY_TIME=${simple_time}" >> $GITHUB_ENV
+
+          # Test 2: Complex query
+          start_time=$(date +%s.%N)
+          ollama run llama3.2:1b "What is continuous integration?" > ai_response.txt
+          end_time=$(date +%s.%N)
+          complex_time=$(echo "$end_time - $start_time" | bc)
+          echo "Complex Query Time: ${complex_time}s" >> test-results/performance-report.txt
+          echo "Response Length: $(wc -w < ai_response.txt) words" >> test-results/performance-report.txt
+          echo "COMPLEX_QUERY_TIME=${complex_time}" >> $GITHUB_ENV
+
+          cat test-results/performance-report.txt
+
+      - name: Generate test metrics
+        if: always()
+        run: |
+          # Count tests from XML results
+          CRITICAL_TOTAL=$(grep -oP 'tests="\K[0-9]+' test-results/critical-results.xml 2>/dev/null | head -1 || echo "0")
+          CRITICAL_FAILURES=$(grep -oP 'failures="\K[0-9]+' test-results/critical-results.xml 2>/dev/null | head -1 || echo "0")
+          CRITICAL_ERRORS=$(grep -oP 'errors="\K[0-9]+' test-results/critical-results.xml 2>/dev/null | head -1 || echo "0")
+          CRITICAL_SKIPPED=$(grep -oP 'skipped="\K[0-9]+' test-results/critical-results.xml 2>/dev/null | head -1 || echo "0")
+          CRITICAL_PASSED=$((CRITICAL_TOTAL - CRITICAL_FAILURES - CRITICAL_ERRORS - CRITICAL_SKIPPED))
+
+          ADVISORY_TOTAL=$(grep -oP 'tests="\K[0-9]+' test-results/reliability-results.xml 2>/dev/null | head -1 || echo "0")
+          ADVISORY_FAILURES=$(grep -oP 'failures="\K[0-9]+' test-results/reliability-results.xml 2>/dev/null | head -1 || echo "0")
+          ADVISORY_ERRORS=$(grep -oP 'errors="\K[0-9]+' test-results/reliability-results.xml 2>/dev/null | head -1 || echo "0")
+          ADVISORY_SKIPPED=$(grep -oP 'skipped="\K[0-9]+' test-results/reliability-results.xml 2>/dev/null | head -1 || echo "0")
+          ADVISORY_PASSED=$((ADVISORY_TOTAL - ADVISORY_FAILURES - ADVISORY_ERRORS - ADVISORY_SKIPPED))
+
+          TOTAL_TESTS=$((CRITICAL_TOTAL + ADVISORY_TOTAL))
+          TOTAL_PASSED=$((CRITICAL_PASSED + ADVISORY_PASSED))
+          TOTAL_FAILED=$((CRITICAL_FAILURES + CRITICAL_ERRORS + ADVISORY_FAILURES + ADVISORY_ERRORS))
+          TOTAL_SKIPPED=$((CRITICAL_SKIPPED + ADVISORY_SKIPPED))
+
+          # Save to environment for summary
+          echo "TOTAL_TESTS=${TOTAL_TESTS}" >> $GITHUB_ENV
+          echo "TOTAL_PASSED=${TOTAL_PASSED}" >> $GITHUB_ENV
+          echo "TOTAL_FAILED=${TOTAL_FAILED}" >> $GITHUB_ENV
+          echo "TOTAL_SKIPPED=${TOTAL_SKIPPED}" >> $GITHUB_ENV
+          echo "CRITICAL_PASSED=${CRITICAL_PASSED}" >> $GITHUB_ENV
+          echo "CRITICAL_FAILED=$((CRITICAL_FAILURES + CRITICAL_ERRORS))" >> $GITHUB_ENV
+          echo "ADVISORY_PASSED=${ADVISORY_PASSED}" >> $GITHUB_ENV
+          echo "ADVISORY_FAILED=$((ADVISORY_FAILURES + ADVISORY_ERRORS))" >> $GITHUB_ENV
+
+          # Create metrics file
+          cat > test-results/test_metrics.json << EOF
+          {
+            "workflow_run": "${{ github.run_number }}",
+            "timestamp": "$(date -Iseconds)",
+            "critical_tests": {
+              "total": ${CRITICAL_TOTAL},
+              "passed": ${CRITICAL_PASSED},
+              "failed": $((CRITICAL_FAILURES + CRITICAL_ERRORS)),
+              "skipped": ${CRITICAL_SKIPPED}
+            },
+            "advisory_tests": {
+              "total": ${ADVISORY_TOTAL},
+              "passed": ${ADVISORY_PASSED},
+              "failed": $((ADVISORY_FAILURES + ADVISORY_ERRORS)),
+              "skipped": ${ADVISORY_SKIPPED}
+            },
+            "totals": {
+              "total": ${TOTAL_TESTS},
+              "passed": ${TOTAL_PASSED},
+              "failed": ${TOTAL_FAILED},
+              "skipped": ${TOTAL_SKIPPED}
+            },
+            "performance": {
+              "simple_query_time": "${SIMPLE_QUERY_TIME:-N/A}",
+              "complex_query_time": "${COMPLEX_QUERY_TIME:-N/A}"
+            }
+          }
+          EOF
+
+          cat test-results/test_metrics.json
+
+      - name: Write workflow summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🧪 Test Results Summary
+
+          ## Run Information
+          - **Workflow Run:** #${{ github.run_number }}
+          - **Commit:** ${{ github.sha }}
+          - **Branch:** ${{ github.ref_name }}
+          - **Timestamp:** $(date)
+
+          ## Test Results
+
+          | Category | Total | ✅ Passed | ❌ Failed | ⏭️ Skipped |
+          |----------|-------|-----------|-----------|------------|
+          EOF
+
+          echo "| **Critical Tests** | ${CRITICAL_TOTAL:-0} | ${CRITICAL_PASSED:-0} | ${CRITICAL_FAILED:-0} | ${CRITICAL_SKIPPED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Advisory Tests** | ${ADVISORY_TOTAL:-0} | ${ADVISORY_PASSED:-0} | ${ADVISORY_FAILED:-0} | ${ADVISORY_SKIPPED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | ${TOTAL_TESTS:-0} | ${TOTAL_PASSED:-0} | ${TOTAL_FAILED:-0} | ${TOTAL_SKIPPED:-0} |" >> $GITHUB_STEP_SUMMARY
+
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+
+          ## ⚡ Performance Metrics
+
+          | Metric | Value |
+          |--------|-------|
+          EOF
+
+          echo "| Simple Query Time | ${SIMPLE_QUERY_TIME:-N/A}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| Complex Query Time | ${COMPLEX_QUERY_TIME:-N/A}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cache Hit | ${{ steps.ollama-cache.outputs.cache-hit }} |" >> $GITHUB_STEP_SUMMARY
+
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+
+          ## 📦 Artifacts
+
+          The following artifacts are available for download:
+
+          - **test-results-run-${{ github.run_number }}** - JUnit XML results, coverage reports, and metrics
+          - **ai-responses-${{ github.run_number }}** - AI analysis outputs
+
+          ### Coverage Report
+
+          View the HTML coverage report in the artifacts for detailed code coverage analysis.
+
+          ---
+
+          EOF
+
+          if [ "${TOTAL_FAILED:-0}" -gt 0 ]; then
+            echo "⚠️ **Some tests failed.** Review the test results artifacts for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **All tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-run-${{ github.run_number }}
+          path: |
+            test-results/
+            coverage.xml
+          retention-days: 30
+
+      - name: Upload AI responses
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-analysis-run-${{ github.run_number }}
+          path: outputs/
+          retention-days: 30

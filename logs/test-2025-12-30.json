@@ -1,0 +1,10 @@
+{"timestamp": "2025-12-30T18:19:23.703756", "level": "INFO", "logger": "test", "message": "Starting test workflow", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:19:23.703899", "level": "INFO", "logger": "test", "message": "Starting: test_operation", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:19:24.704242", "level": "INFO", "logger": "test", "message": "Completed: test_operation (1.00s)", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:19:24.704661", "level": "INFO", "logger": "test", "message": "METRIC: test_count=42 items | Context: {\"metric_name\": \"test_count\", \"value\": 42, \"unit\": \" items\", \"tags\": {}}", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:19:24.704775", "level": "INFO", "logger": "test", "message": "Test completed successfully", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:49:16.415878", "level": "INFO", "logger": "test", "message": "Starting test workflow", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:49:16.417609", "level": "INFO", "logger": "test", "message": "Starting: test_operation", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:49:17.417878", "level": "INFO", "logger": "test", "message": "Completed: test_operation (1.00s)", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:49:17.418142", "level": "INFO", "logger": "test", "message": "METRIC: test_count=42 items | Context: {\"metric_name\": \"test_count\", \"value\": 42, \"unit\": \" items\", \"tags\": {}}", "module": "logger", "function": "info", "line": 116}
+{"timestamp": "2025-12-30T18:49:17.418241", "level": "INFO", "logger": "test", "message": "Test completed successfully", "module": "logger", "function": "info", "line": 116}

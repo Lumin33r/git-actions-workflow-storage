@@ -2,7 +2,7 @@ name: Ollama AI Processing
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
